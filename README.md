@@ -1,11 +1,29 @@
--- 1j: Stored Procedures
+اخد نسخة من كل العمليات اللي حصلت في الداتا بيز بعد آخر Full Backup.
+الهدف: تفضي ملف الـ LDF + ترجع الداتا لنقطة زمنية بالدقيقة.
+لازم Full Backup الأول 
+مينفعش تاخد Log وانت معندكش Full Backup. لازم الترتيب: Full > وبعدين Log
 
-CREATE TABLE Employees ( Id INT IDENTITY(1,1) PRIMARY KEY, FirstName NVARCHAR(50) NOT NULL, LastName NVARCHAR(50) NOT NULL, Salary DECIMAL(18,2) NOT NULL ); GO --2 CREATE PROCEDURE GetAllEmployees AS BEGIN SELECT * FROM Employees; END; GO
+هو نسخة احتياطية بتاخدها من "دفتر العمليات" بتاع SQL Server.تخيل الداتا بيز كأنها كتاب. كل ما تعمل Insert, Update, Delete... SQL بيكتبها الأول في دفتر اسمه Transaction Log وبعدين ينقلها للكتاب الأساسي.
+1-- Transaction Log Backup - 
+ALTER DATABASE [YourDB]
+SET RECOVERY FULL;
+GO
 
--- 3. : CREATE PROCEDURE GetHighSalaryEmployees @MinSalary DECIMAL(18,2) AS BEGIN SELECT * FROM Employees WHERE Salary > @MinSalary; END; GO --4 CREATE PROCEDURE AddEmployee @FirstName NVARCHAR(50), @LastName NVARCHAR(50), @Salary DECIMAL(18,2) AS BEGIN INSERT INTO Employees (FirstName, LastName, Salary) VALUES (@FirstName, @LastName, @Salary); END; GO
+BACKUP DATABASE [YourDB]
+TO DISK = 'D:\Backup\YourDB_Full.bak'
+WITH INIT, COMPRESSION;
+GO
 
-------------------part2-- Trigger
+BACKUP LOG [YourDB]
+TO DISK = 'D:\Backup\YourDB_Log.trn'
+WITH INIT, COMPRESSION, STATS = 10;
+GO
 
-1- EmployeeLog CREATE TABLE EmployeeLog ( Id INT IDENTITY(1,1) PRIMARY KEY, EmployeeId INT NOT NULL, Action NVARCHAR(50) NOT NULL, ActionDate DATETIME NOT NULL DEFAULT GETDATE() ); GO
-
--- 2. Trigger: CREATE TRIGGER trg_AfterInsertEmployee ON Employees AFTER INSERT AS BEGIN INSERT INTO EmployeeLog (EmployeeId, Action, ActionDate) SELECT Id, 'INSERT', GETDATE() FROM inserted; -- inserted END; GO
+2--jop
+عشان ا   DF ميملاش الهارد 
+ملف الـ Transaction Log بيفضل يكبر مع كل عملية Insert/Update/Delete. لو سبته هيكبر لحد ما الهارد يتملي والسيرفر يقع. 
+الـ Job بياخد منه نسخة كل شوية ويفضيه تلقائي.عشان السيرفر ميقفش 
+لو انت اللي هتاخد الـ Backup بايدك كل 15 دقيقة، مش هتعرف تشتغل. 
+الـ Job بيشتغل Background يعني: انت شغال عادي، اليوزر شغال عادي، وهو بينزل ياخد النسخة ويرجع من سكات.عشان الـ Recovery Point-in-Time 
+باختصار: 
+Background Job = تسيبه يشتغل لوحده كل X دقايق عشان يحميك من 2 كارثة: الهارد يتملي، والداتا تضيع.ت
