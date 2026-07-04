@@ -1,0 +1,11 @@
+-- 1j: Stored Procedures
+
+CREATE TABLE Employees ( Id INT IDENTITY(1,1) PRIMARY KEY, FirstName NVARCHAR(50) NOT NULL, LastName NVARCHAR(50) NOT NULL, Salary DECIMAL(18,2) NOT NULL ); GO --2 CREATE PROCEDURE GetAllEmployees AS BEGIN SELECT * FROM Employees; END; GO
+
+-- 3. : CREATE PROCEDURE GetHighSalaryEmployees @MinSalary DECIMAL(18,2) AS BEGIN SELECT * FROM Employees WHERE Salary > @MinSalary; END; GO --4 CREATE PROCEDURE AddEmployee @FirstName NVARCHAR(50), @LastName NVARCHAR(50), @Salary DECIMAL(18,2) AS BEGIN INSERT INTO Employees (FirstName, LastName, Salary) VALUES (@FirstName, @LastName, @Salary); END; GO
+
+------------------part2-- Trigger
+
+1- EmployeeLog CREATE TABLE EmployeeLog ( Id INT IDENTITY(1,1) PRIMARY KEY, EmployeeId INT NOT NULL, Action NVARCHAR(50) NOT NULL, ActionDate DATETIME NOT NULL DEFAULT GETDATE() ); GO
+
+-- 2. Trigger: CREATE TRIGGER trg_AfterInsertEmployee ON Employees AFTER INSERT AS BEGIN INSERT INTO EmployeeLog (EmployeeId, Action, ActionDate) SELECT Id, 'INSERT', GETDATE() FROM inserted; -- inserted END; GO
